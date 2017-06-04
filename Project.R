@@ -102,4 +102,42 @@ Id_df_sorted = ID_df[order(ID_df$propOfId, decreasing =TRUE) ,]
 par(mar=c(9.1, 4.1, 3.1, 2.1))
 barplot(Id_df_sorted$propOfId, names.arg = Id_df_sorted$namesOfId, cex.names = 0.7, las=2, ylim = c(0, 0.8),beside = TRUE, col = c("#3CB371"))
 
+#where money matters
+library(plyr)
 
+money_matter=rep(FALSE, 31132)
+for(i in seq_along(data_with_exp$new_job_value)) {
+  split = strsplit(data_with_exp$new_job_value[i], ";")
+  split = unlist(split)
+  if(!is.na(split[1]) && split[1] == "Salary"){
+    money_matter[i] = TRUE
+  }
+}
+
+answers_by_countries = count(data_with_exp$country)
+cool_countries = answers_by_countries[answers_by_countries$freq >= 200 & !is.na(answers_by_countries$x),]$x
+relavant_data = data_with_exp[data_with_exp$country %in% cool_countries,]
+
+data_with_exp["money_matters"] = money_matter
+#money_by_contry = aggregate(data_with_exp$money_matters, by=list(country=data_with_exp$country), FUN=length)
+money_by_contry = relavant_data[relavant_data$money_matters == TRUE,]
+
+relavant_data_without_nas = relavant_data[!is.na(relavant_data$salary_midpoint),]
+mean_sal_country = aggregate(relavant_data_without_nas$salary_midpoint, by=list(country=relavant_data_without_nas$country), FUN=mean)
+
+money_by_contry = relavant_data[relavant_data$money_matters == TRUE,]
+count_of_all = count(relavant_data$country)$freq
+count_of_money_lovers = count(money_by_contry$country)$freq
+rates_money_lovers = count_of_money_lovers/count_of_all
+
+par(mar=c(3.5, 3.5 ,1 ,1))
+options(scipen = 999)
+countries = revalue(mean_sal_country$country, c("Russian Federation" = "Russia"))
+text(mean_sal_country$x, rates_money_lovers, labels=mean_sal_country$country, cex= 0.7, pos = 3)
+plot(mean_sal_country$x, rates_money_lovers,main= "Mean salary vs. rates of people who values salary",
+     xlab= "Mean salary",
+     ylab= "Rates of people who values salary",
+     col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2)
+
+abline(lm(rates_money_lovers~mean_sal_country$x))
+text(mean_sal_country$x, rates_money_lovers, labels=countries, cex= 0.7, pos = 3)
